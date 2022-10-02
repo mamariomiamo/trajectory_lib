@@ -4,3 +4,6 @@
 [submodule "include/third-party/osqp"]
 	path = include/third-party/osqp
 	url = https://github.com/osqp/osqp
+[submodule "matlab/min_snap"]
+	path = matlab/min_snap
+	url = git@github.com:mamariomiamo/min_snap.git
