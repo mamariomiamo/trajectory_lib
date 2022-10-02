@@ -1,0 +1,6 @@
+[submodule "include/third-party/matplotlib-cpp"]
+	path = include/third-party/matplotlib-cpp
+	url = git@github.com:mamariomiamo/matplotlib-cpp.git
+[submodule "include/third-party/osqp"]
+	path = include/third-party/osqp
+	url = https://github.com/osqp/osqp
