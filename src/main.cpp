@@ -206,7 +206,7 @@ int main()
     log("y_coeff is ");
     log(y_coeff.transpose());
     log("z_coeff is ");
-    log(x_coeff.transpose());
+    log(z_coeff.transpose());
 }
 
 vector<double> computeT(const vector<Vector3d> &waypt_list, const Vector3d &vel_max)
