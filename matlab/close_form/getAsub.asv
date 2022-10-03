@@ -11,16 +11,11 @@ n_order = 5;
 dim = n_order+1;
 % A_sub = zeros(dim,dim);
 
-% waypts = [0,0;
-%     1,2;
-%     2,-1;
-%     4,8;
-%     5,2]';
-
-waypts = [ -2 4;
-    -1 0.5;
-    0 0;
-    1 1;]';
+waypts = [0,0;
+    1,2;
+    2,-1;
+    4,8;
+    5,2]';
 
 % waypts = [0,0;
 %     1,2;
@@ -29,7 +24,7 @@ waypts = [ -2 4;
 k_segment = size(waypts,2) - 1; % 4
 % A = zeros(dim*k_segment, dim*k_segment);
 
-T = 1.78179;
+T = 4;
 t_alloc = allocate_time(waypts,T);
 % 
 % A_sub(1,:) = poly_evaluate(0,t_alloc(1),n_order);
@@ -120,20 +115,10 @@ R_pp = zeros(free_number, free_number);
 
 R_ff = R(1:fixed_number,1:fixed_number);
 R_fp = R(1:fixed_number,fixed_number+1:fixed_number+1+free_number-1);
-R_pf = R(fixed_number+1:fixed_number+1+free_number-1,1:fixed_number);
-R_pp = R(fixed_number+1:fixed_number+1+free_number-1,fixed_number+1:fixed_number+1+free_number-1);
+R_pf = R(fixed_number+1:fixed_numer+1+free_number-1,1:fixed_number);
+R_pp = R(fixed_number+1:fixed_numer+1+free_number-1,)
 
-d_f(1) =  waypts(1,1);
-for i=4:4+k_segment-1
-    d_f(i) = waypts(1,i-2);
-end
-d_p_primal = -inv(R_pp) * R_fp' * d_f;
 
-d_primal = [d_f;d_p_primal];
-
-d = C_t * d_primal;
-
-p = inv(M) * d
 
 
 
