@@ -95,7 +95,7 @@ void evaluatePoly(VectorXd &row_vector, int derivative_order, double time, int p
 VectorXd optimize(const MatrixXd &hessian_Q, const MatrixXd &equality_A, VectorXd &equality_b);
 // void optimize(const MatrixXd &hessian_Q, const MatrixXd &equality_A, VectorXd &equality_b);
 
-void computeDerivateMappingMatrix(MatrixXd & mapping_A, int k_segement, const vector<double> &time_vector);
+void computeDerivateMappingMatrix(MatrixXd &mapping_A, int k_segement, const vector<double> &time_vector);
 
 int main()
 {
@@ -199,21 +199,113 @@ int main()
     computeBeq(equality_b_y, k_segement, waypt_single_axis[1]);
     computeBeq(equality_b_z, k_segement, waypt_single_axis[2]);
 
-    x_coeff = optimize(hessian_Q, equality_A, equality_b_x);
-    y_coeff = optimize(hessian_Q, equality_A, equality_b_y);
-    z_coeff = optimize(hessian_Q, equality_A, equality_b_z);
+    // x_coeff = optimize(hessian_Q, equality_A, equality_b_x);
+    // y_coeff = optimize(hessian_Q, equality_A, equality_b_y);
+    // z_coeff = optimize(hessian_Q, equality_A, equality_b_z);
 
-    log("x_coeff is ");
-    log(x_coeff.transpose());
-    log("y_coeff is ");
-    log(y_coeff.transpose());
-    log("z_coeff is ");
-    log(z_coeff.transpose());
+    // log("x_coeff is ");
+    // log(x_coeff.transpose());
+    // log("y_coeff is ");
+    // log(y_coeff.transpose());
+    // log("z_coeff is ");
+    // log(z_coeff.transpose());
 
     // closed form solutions
     int mapping_A_dim = k_segement * 6; // every segment will have 2 sets of p,v,a constraints
-    MatrixXd mapping_A = MatrixXd::Zero(mapping_A_dim,mapping_A_dim);
+    MatrixXd mapping_A = MatrixXd::Zero(mapping_A_dim, mapping_A_dim);
     computeDerivateMappingMatrix(mapping_A, k_segement, time_vector);
+
+    //
+    int constraint_order = 2;                                       // p (order 0), v (order 1), a (order 2)
+    int fixed_number = 2 * (constraint_order + 1) + k_segement - 1; // initial and final p,v,a + intermediate p
+    int free_number = constraint_order * (k_segement - 1);          // intermediate v,a
+
+    // VectorXd decision_f(fixed_number), decision_p(free_number);
+
+    VectorXd decision_f = MatrixXd::Zero(fixed_number, 1);
+    decision_f(0) = waypt_single_axis[0][0];
+    for (int i = 3; i < 3 + k_segement; i++)
+    {
+        decision_f(i) = waypt_single_axis[0][i - 2];
+    }
+
+    log(decision_f.transpose());
+    VectorXd decision_p_primal = MatrixXd::Zero(free_number, 1);
+
+    int C_t_col = fixed_number + free_number;
+    int C_t_row = k_segement * 2 * (1 + constraint_order);
+
+    MatrixXd C_t = MatrixXd::Zero(C_t_row, C_t_col);
+
+    Matrix3d C_0;
+    C_0 << 1, 0, 0,
+        0, 1, 0,
+        0, 0, 1;
+
+    Vector4d C_1;
+    C_1 << 1, 0, 0, 1;
+
+    log(C_1);
+
+    Matrix<double, 5, 2> C_2;
+    C_2.setZero();
+    C_2(0, 0) = 1;
+    C_2(1, 1) = 1;
+    C_2(3, 0) = 1;
+    C_2(4, 1) = 1;
+    log(C_2);
+
+    int row_count = 0;
+    int col_count = 0;
+
+    C_t.block(row_count, col_count, C_0.rows(), C_0.cols()) = C_0;
+
+    row_count += C_0.rows();
+    col_count += C_0.cols();
+
+    for (int i = 0; i < k_segement - 1; i++)
+    {
+        C_t.block(row_count, col_count, C_1.rows(), C_1.cols()) = C_1;
+        row_count += C_1.rows();
+        row_count += 2;
+        col_count += C_1.cols();
+    }
+
+    C_t.block(row_count, col_count, C_0.rows(), C_0.cols()) = C_0;
+    col_count += C_0.cols();
+    row_count = 4;
+
+    for (int i = 0; i < k_segement - 1; i++)
+    {
+        C_t.block(row_count, col_count, C_2.rows(), C_2.cols()) = C_2;
+        row_count += C_2.rows();
+        row_count += 1;
+        col_count += C_2.cols();
+    }
+
+    log(C_t);
+    int dim_R = fixed_number + free_number;
+    MatrixXd R = MatrixXd::Zero(dim_R, dim_R);
+    R = C_t.transpose() * (mapping_A.inverse()).transpose() * hessian_Q * mapping_A.inverse() * C_t;
+    log(R);
+
+    MatrixXd R_ff = MatrixXd::Zero(fixed_number, fixed_number);
+    MatrixXd R_fp = MatrixXd::Zero(fixed_number, free_number);
+    MatrixXd R_pf = MatrixXd::Zero(free_number, fixed_number);
+    MatrixXd R_pp = MatrixXd::Zero(free_number, free_number);
+
+    R_ff = R.block(0, 0, fixed_number, fixed_number);
+    R_fp = R.block(0, fixed_number, fixed_number,free_number);
+    R_pf = R.block(fixed_number, 0, free_number, fixed_number);
+    R_pp = R.block(fixed_number, free_number, free_number, free_number);
+    
+    decision_p_primal = - R_pp.inverse() * R_fp.transpose() * decision_f;
+    log(decision_p_primal);
+    VectorXd decision_primal(fixed_number + free_number);
+    decision_primal << decision_f, decision_p_primal;
+    log(decision_primal);
+
+
 }
 
 vector<double> computeT(const vector<Vector3d> &waypt_list, const Vector3d &vel_max)
@@ -551,34 +643,32 @@ VectorXd optimize(const MatrixXd &hessian_Q, const MatrixXd &equality_A, VectorX
     return solver.getPrimalSol();
 }
 
-
-void computeDerivateMappingMatrix(MatrixXd & mapping_A, int k_segement, const vector<double> &time_vector)
+void computeDerivateMappingMatrix(MatrixXd &mapping_A, int k_segement, const vector<double> &time_vector)
 {
-    int sub_dim = mapping_A.cols()/k_segement;
+    int sub_dim = mapping_A.cols() / k_segement;
 
     VectorXd sub_A_row(sub_dim);
 
-    for (int i = 0; i< k_segement; i++)
+    for (int i = 0; i < k_segement; i++)
     {
 
         MatrixXd sub_A = MatrixXd::Zero(sub_dim, sub_dim);
 
-        for(int j = 0; j<3;j++)
+        for (int j = 0; j < 3; j++)
         {
-            evaluatePoly(sub_A_row, j, time_vector[i], (sub_dim-1));
+            evaluatePoly(sub_A_row, j, time_vector[i], (sub_dim - 1));
             sub_A.row(j) = sub_A_row.transpose();
             sub_A_row = VectorXd::Zero(sub_dim);
         }
 
-        for(int j = 3; j<6;j++)
+        for (int j = 3; j < 6; j++)
         {
-            evaluatePoly(sub_A_row, j-3, time_vector[i+1], (sub_dim-1));
+            evaluatePoly(sub_A_row, j - 3, time_vector[i + 1], (sub_dim - 1));
             sub_A.row(j) = sub_A_row.transpose();
             sub_A_row = VectorXd::Zero(sub_dim);
         }
-        int block_index = sub_dim*i;
+        int block_index = sub_dim * i;
 
-        mapping_A.block(block_index,block_index,sub_dim,sub_dim) = sub_A;
+        mapping_A.block(block_index, block_index, sub_dim, sub_dim) = sub_A;
     }
-
 }

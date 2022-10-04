@@ -39,6 +39,10 @@ t_alloc = allocate_time(waypts,T);
 % A_sub(5,:) = poly_evaluate(1,t_alloc(2),n_order);
 % A_sub(6,:) = poly_evaluate(2,t_alloc(2),n_order);
 A=[];
+
+% every segment will have two sets of derivative constriants
+% p,v,a for start of the segment
+% p,v,a for end of the segment
 for i=1:k_segment
     A_sub = zeros(dim);
     for j=1:3
