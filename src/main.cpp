@@ -95,6 +95,8 @@ void evaluatePoly(VectorXd &row_vector, int derivative_order, double time, int p
 VectorXd optimize(const MatrixXd &hessian_Q, const MatrixXd &equality_A, VectorXd &equality_b);
 // void optimize(const MatrixXd &hessian_Q, const MatrixXd &equality_A, VectorXd &equality_b);
 
+void computeDerivateMappingMatrix(MatrixXd & mapping_A, int k_segement, const vector<double> &time_vector);
+
 int main()
 {
 
@@ -207,6 +209,11 @@ int main()
     log(y_coeff.transpose());
     log("z_coeff is ");
     log(z_coeff.transpose());
+
+    // closed form solutions
+    int mapping_A_dim = k_segement * 6; // every segment will have 2 sets of p,v,a constraints
+    MatrixXd mapping_A = MatrixXd::Zero(mapping_A_dim,mapping_A_dim);
+    computeDerivateMappingMatrix(mapping_A, k_segement, time_vector);
 }
 
 vector<double> computeT(const vector<Vector3d> &waypt_list, const Vector3d &vel_max)
@@ -542,4 +549,36 @@ VectorXd optimize(const MatrixXd &hessian_Q, const MatrixXd &equality_A, VectorX
     }
     solver.solve();
     return solver.getPrimalSol();
+}
+
+
+void computeDerivateMappingMatrix(MatrixXd & mapping_A, int k_segement, const vector<double> &time_vector)
+{
+    int sub_dim = mapping_A.cols()/k_segement;
+
+    VectorXd sub_A_row(sub_dim);
+
+    for (int i = 0; i< k_segement; i++)
+    {
+
+        MatrixXd sub_A = MatrixXd::Zero(sub_dim, sub_dim);
+
+        for(int j = 0; j<3;j++)
+        {
+            evaluatePoly(sub_A_row, j, time_vector[i], (sub_dim-1));
+            sub_A.row(j) = sub_A_row.transpose();
+            sub_A_row = VectorXd::Zero(sub_dim);
+        }
+
+        for(int j = 3; j<6;j++)
+        {
+            evaluatePoly(sub_A_row, j-3, time_vector[i+1], (sub_dim-1));
+            sub_A.row(j) = sub_A_row.transpose();
+            sub_A_row = VectorXd::Zero(sub_dim);
+        }
+        int block_index = sub_dim*i;
+
+        mapping_A.block(block_index,block_index,sub_dim,sub_dim) = sub_A;
+    }
+
 }
