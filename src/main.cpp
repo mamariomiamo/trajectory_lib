@@ -97,6 +97,10 @@ VectorXd optimize(const MatrixXd &hessian_Q, const MatrixXd &equality_A, VectorX
 
 void computeDerivateMappingMatrix(MatrixXd &mapping_A, int k_segement, const vector<double> &time_vector);
 
+void computeCoeffConstrainedQP(VectorXd &coeff, const MatrixXd &hessian_Q, int n_poly_order, int k_segment, const vector<double> &waypt_single_axis, const vector<double> &time_vector);
+
+void computeCoeffCloseFormQP(VectorXd &coeff, const MatrixXd &hessian_Q, int n_poly_order, int k_segment, const vector<double> &waypt_single_axis, const vector<double> &time_vector);
+
 int main()
 {
 
@@ -129,8 +133,6 @@ int main()
 
     Vector3d vel_max = {vel_x, vel_y, vel_z};
 
-    log(vel_max);
-
     vector<double> time_vector = computeT(waypt_list, vel_max);
 
     // 3. Set up optimization problem
@@ -139,17 +141,11 @@ int main()
     int n_poly_order = 5;
     int r_derivate_order = 4; // which derivative's squared integral to minimize
 
-    // 3.1 decision variables
+    // 3.1 decision variables/ vectors that stores the polynomial coefficients
     int coeff_number = k_segement * (n_poly_order + 1);
     VectorXd x_coeff(coeff_number);
     VectorXd y_coeff(coeff_number);
     VectorXd z_coeff(coeff_number);
-    // vector<double> x_coeff(coeff_number);
-    // vector<double> y_coeff(coeff_number);
-    // vector<double> z_coeff(coeff_number);
-    // vector<vector<double>> x_coeff(k_segement);
-    // vector<vector<double>> y_coeff(k_segement);
-    // vector<vector<double>> z_coeff(k_segement);
 
     // 3.2 objective function
 
@@ -169,143 +165,19 @@ int main()
 
     computeHessian(hessian_Q, hessian_dim, n_poly_order, r_derivate_order, k_segement, time_vector);
 
-    // // SparseMatrix equality constraint equality_A
-    int Aeq_row, Aeq_col;
+    // computeCoeffConstrainedQP(x_coeff, hessian_Q, n_poly_order, k_segement, waypt_single_axis[0], time_vector);
+    // computeCoeffConstrainedQP(y_coeff, hessian_Q, n_poly_order, k_segement, waypt_single_axis[1], time_vector);
+    // computeCoeffConstrainedQP(z_coeff, hessian_Q, n_poly_order, k_segement, waypt_single_axis[2], time_vector);
 
-    // number of rows of Aeq is same as number of equality constraints
-    // (1) intermediate waypoints: k-1
-    // (2) continuous p,v,a at intermediate waypoints: 3*(k-1)
-    // (3) start and end p,v,a: 6
-    // total = 4(k-1) + 6 = 4k+2
-    // each segment is represented by a n^th order polynomial which has (n+1) coefficients
-    Aeq_row = 4 * k_segement + 2;
-    // log(Aeq_row);
-
-    // number of columns of Aeq is same as number of decision variables (number of polynomial coefficients)
-    // each segment is represented by a n^th order polynomial which has (n+1) coefficients
-    Aeq_col = k_segement * (n_poly_order + 1);
-    // log(Aeq_col);
-
-    MatrixXd equality_A = MatrixXd::Zero(Aeq_row, Aeq_col);
-    int beq_dim = Aeq_row;
-    VectorXd equality_b_x = VectorXd::Zero(beq_dim);
-    VectorXd equality_b_y = VectorXd::Zero(beq_dim);
-    VectorXd equality_b_z = VectorXd::Zero(beq_dim);
-    // VectorXd equality_b_x_1 = VectorXd::Zero(beq_dim);
-    // computeEquality(equality_A, Aeq_row, Aeq_col, equality_b_x, beq_dim, n_poly_order, k_segement, waypt_single_axis[0], time_vector);
-    computeAeq(equality_A, n_poly_order, k_segement, time_vector);
-
-    computeBeq(equality_b_x, k_segement, waypt_single_axis[0]);
-    computeBeq(equality_b_y, k_segement, waypt_single_axis[1]);
-    computeBeq(equality_b_z, k_segement, waypt_single_axis[2]);
-
-    // x_coeff = optimize(hessian_Q, equality_A, equality_b_x);
-    // y_coeff = optimize(hessian_Q, equality_A, equality_b_y);
-    // z_coeff = optimize(hessian_Q, equality_A, equality_b_z);
-
-    // log("x_coeff is ");
-    // log(x_coeff.transpose());
-    // log("y_coeff is ");
-    // log(y_coeff.transpose());
-    // log("z_coeff is ");
-    // log(z_coeff.transpose());
-
-    // closed form solutions
-    int mapping_A_dim = k_segement * 6; // every segment will have 2 sets of p,v,a constraints
-    MatrixXd mapping_A = MatrixXd::Zero(mapping_A_dim, mapping_A_dim);
-    computeDerivateMappingMatrix(mapping_A, k_segement, time_vector);
-
-    //
-    int constraint_order = 2;                                       // p (order 0), v (order 1), a (order 2)
-    int fixed_number = 2 * (constraint_order + 1) + k_segement - 1; // initial and final p,v,a + intermediate p
-    int free_number = constraint_order * (k_segement - 1);          // intermediate v,a
-
-    // VectorXd decision_f(fixed_number), decision_p(free_number);
-
-    VectorXd decision_f = MatrixXd::Zero(fixed_number, 1);
-    decision_f(0) = waypt_single_axis[0][0];
-    for (int i = 3; i < 3 + k_segement; i++)
-    {
-        decision_f(i) = waypt_single_axis[0][i - 2];
-    }
-
-    log(decision_f.transpose());
-    VectorXd decision_p_primal = MatrixXd::Zero(free_number, 1);
-
-    int C_t_col = fixed_number + free_number;
-    int C_t_row = k_segement * 2 * (1 + constraint_order);
-
-    MatrixXd C_t = MatrixXd::Zero(C_t_row, C_t_col);
-
-    Matrix3d C_0;
-    C_0 << 1, 0, 0,
-        0, 1, 0,
-        0, 0, 1;
-
-    Vector4d C_1;
-    C_1 << 1, 0, 0, 1;
-
-    log(C_1);
-
-    Matrix<double, 5, 2> C_2;
-    C_2.setZero();
-    C_2(0, 0) = 1;
-    C_2(1, 1) = 1;
-    C_2(3, 0) = 1;
-    C_2(4, 1) = 1;
-    log(C_2);
-
-    int row_count = 0;
-    int col_count = 0;
-
-    C_t.block(row_count, col_count, C_0.rows(), C_0.cols()) = C_0;
-
-    row_count += C_0.rows();
-    col_count += C_0.cols();
-
-    for (int i = 0; i < k_segement - 1; i++)
-    {
-        C_t.block(row_count, col_count, C_1.rows(), C_1.cols()) = C_1;
-        row_count += C_1.rows();
-        row_count += 2;
-        col_count += C_1.cols();
-    }
-
-    C_t.block(row_count, col_count, C_0.rows(), C_0.cols()) = C_0;
-    col_count += C_0.cols();
-    row_count = 4;
-
-    for (int i = 0; i < k_segement - 1; i++)
-    {
-        C_t.block(row_count, col_count, C_2.rows(), C_2.cols()) = C_2;
-        row_count += C_2.rows();
-        row_count += 1;
-        col_count += C_2.cols();
-    }
-
-    log(C_t);
-    int dim_R = fixed_number + free_number;
-    MatrixXd R = MatrixXd::Zero(dim_R, dim_R);
-    R = C_t.transpose() * (mapping_A.inverse()).transpose() * hessian_Q * mapping_A.inverse() * C_t;
-    log(R);
-
-    MatrixXd R_ff = MatrixXd::Zero(fixed_number, fixed_number);
-    MatrixXd R_fp = MatrixXd::Zero(fixed_number, free_number);
-    MatrixXd R_pf = MatrixXd::Zero(free_number, fixed_number);
-    MatrixXd R_pp = MatrixXd::Zero(free_number, free_number);
-
-    R_ff = R.block(0, 0, fixed_number, fixed_number);
-    R_fp = R.block(0, fixed_number, fixed_number,free_number);
-    R_pf = R.block(fixed_number, 0, free_number, fixed_number);
-    R_pp = R.block(fixed_number, free_number, free_number, free_number);
-    
-    decision_p_primal = - R_pp.inverse() * R_fp.transpose() * decision_f;
-    log(decision_p_primal);
-    VectorXd decision_primal(fixed_number + free_number);
-    decision_primal << decision_f, decision_p_primal;
-    log(decision_primal);
-
-
+    computeCoeffCloseFormQP(x_coeff, hessian_Q, n_poly_order, k_segement, waypt_single_axis[0], time_vector);
+    computeCoeffCloseFormQP(y_coeff, hessian_Q, n_poly_order, k_segement, waypt_single_axis[1], time_vector);
+    computeCoeffCloseFormQP(z_coeff, hessian_Q, n_poly_order, k_segement, waypt_single_axis[2], time_vector);
+    log("x_coeff is ");
+    log(x_coeff.transpose());
+    log("y_coeff is ");
+    log(y_coeff.transpose());
+    log("z_coeff is ");
+    log(z_coeff.transpose());
 }
 
 vector<double> computeT(const vector<Vector3d> &waypt_list, const Vector3d &vel_max)
@@ -322,16 +194,11 @@ vector<double> computeT(const vector<Vector3d> &waypt_list, const Vector3d &vel_
     for (int i = 0; i < segment_number; i++)
     {
         double length = (waypt_list[i + 1] - waypt_list[i]).norm();
-        // log(length);
         segment_length[i] = length;
         total_dist += length;
     }
 
     double total_time = total_dist / vel_norm;
-    // log("total time is ");
-    log(total_time);
-
-    // double total_dist = 0;
 
     for (int i = 1; i < timestamp_number; i++)
     {
@@ -339,9 +206,7 @@ vector<double> computeT(const vector<Vector3d> &waypt_list, const Vector3d &vel_
         // time_vector[i] = total_time * (segment_length[i-1] / total_dist);
 
         // holds absolute timestamp for each segment duration
-        time_vector[i] = total_time * (segment_length[i - 1] / total_dist) + time_vector[i - 1]; //
-        log("segment time interval is ");
-        log(time_vector[i]);
+        time_vector[i] = total_time * (segment_length[i - 1] / total_dist) + time_vector[i - 1]; 
     }
 
     return time_vector;
@@ -378,8 +243,6 @@ void computeHessian(MatrixXd &hessian, int hessian_dim, int n_poly_order, int r_
 
         hessian.block(i * sub_mat_dim, i * sub_mat_dim, sub_mat_dim, sub_mat_dim) = sub_mat;
     }
-
-    log(hessian);
 }
 
 void computeEquality(MatrixXd &Aeq, int Aeq_row, int Aeq_col, VectorXd &beq, int beq_dim, int n_poly_order, int k_segement, const vector<double> &waypoint_list, const vector<double> &time_vector)
@@ -403,33 +266,7 @@ void computeEquality(MatrixXd &Aeq, int Aeq_row, int Aeq_col, VectorXd &beq, int
         evaluatePoly(vect, i, 0.0, n_poly_order);
         Aeq.block(row_count, 0, 1, vect.size()) = vect.transpose();
         row_count++;
-        log("poly eval");
-        log(vect);
     }
-
-    // // (2) intermedia waypoints
-    // for (int i = 3; i < 3 + k_segement - 1; i++)
-    // {
-    //     VectorXd vect(n_poly_order + 1);
-    //     evaluatePoly(vect, 0, time_vector[i - 3 + 1], n_poly_order);
-    //     Aeq.block(row_count, (i - 2) * (n_poly_order + 1), 1, vect.size()) = vect.transpose();
-    //     row_count++;
-    //     log("poly eval");
-    //     log(vect);
-    // }
-
-    // (3) final p, v, a
-    // int j=0;
-    // for (int i = 3 + k_segement - 1; i < 5 + k_segement; i++)
-    // {
-    //     VectorXd vect(n_poly_order + 1);
-    //     evaluatePoly(vect, j, time_vector[k_segement], n_poly_order);
-    //     Aeq.block(row_count, (k_segement - 1) * (n_poly_order + 1), 1, vect.size()) = vect.transpose();
-    //     row_count++;
-    //     log("poly eval");
-    //     log(vect);
-    //     j++;
-    // }
 
     // final p,v,a row 4, 5, 6
     beq(row_count) = waypoint_list.back();
@@ -439,8 +276,6 @@ void computeEquality(MatrixXd &Aeq, int Aeq_row, int Aeq_col, VectorXd &beq, int
         evaluatePoly(vect, i, time_vector[k_segement], n_poly_order);
         Aeq.block(row_count, (k_segement - 1) * (n_poly_order + 1), 1, vect.size()) = vect.transpose();
         row_count++;
-        log("poly eval");
-        log(vect);
     }
 
     // intermediate waypoints row 7 to row 7 + (k_segment - 1) - 1
@@ -469,9 +304,6 @@ void computeEquality(MatrixXd &Aeq, int Aeq_row, int Aeq_col, VectorXd &beq, int
             row_count++;
         }
     }
-
-    // log("Aeq");
-    // log(Aeq);
 }
 
 void computeAeq(MatrixXd &Aeq, int n_poly_order, int k_segement, const vector<double> &time_vector)
@@ -494,33 +326,7 @@ void computeAeq(MatrixXd &Aeq, int n_poly_order, int k_segement, const vector<do
         evaluatePoly(vect, i, 0.0, n_poly_order);
         Aeq.block(row_count, 0, 1, vect.size()) = vect.transpose();
         row_count++;
-        // log("poly eval");
-        // log(vect);
     }
-
-    // // (2) intermedia waypoints
-    // for (int i = 3; i < 3 + k_segement - 1; i++)
-    // {
-    //     VectorXd vect(n_poly_order + 1);
-    //     evaluatePoly(vect, 0, time_vector[i - 3 + 1], n_poly_order);
-    //     Aeq.block(row_count, (i - 2) * (n_poly_order + 1), 1, vect.size()) = vect.transpose();
-    //     row_count++;
-    //     log("poly eval");
-    //     log(vect);
-    // }
-
-    // (3) final p, v, a
-    // int j=0;
-    // for (int i = 3 + k_segement - 1; i < 5 + k_segement; i++)
-    // {
-    //     VectorXd vect(n_poly_order + 1);
-    //     evaluatePoly(vect, j, time_vector[k_segement], n_poly_order);
-    //     Aeq.block(row_count, (k_segement - 1) * (n_poly_order + 1), 1, vect.size()) = vect.transpose();
-    //     row_count++;
-    //     log("poly eval");
-    //     log(vect);
-    //     j++;
-    // }
 
     // final p,v,a row 4, 5, 6
     for (int i = 0; i < 3; i++)
@@ -529,8 +335,6 @@ void computeAeq(MatrixXd &Aeq, int n_poly_order, int k_segement, const vector<do
         evaluatePoly(vect, i, time_vector[k_segement], n_poly_order);
         Aeq.block(row_count, (k_segement - 1) * (n_poly_order + 1), 1, vect.size()) = vect.transpose();
         row_count++;
-        log("poly eval");
-        log(vect);
     }
 
     // intermediate waypoints row 7 to row 7 + (k_segment - 1) - 1
@@ -558,9 +362,6 @@ void computeAeq(MatrixXd &Aeq, int n_poly_order, int k_segement, const vector<do
             row_count++;
         }
     }
-
-    // log("Aeq");
-    // log(Aeq);
 }
 
 void computeBeq(VectorXd &beq, int k_segement, const vector<double> &waypoint_list)
@@ -629,9 +430,6 @@ VectorXd optimize(const MatrixXd &hessian_Q, const MatrixXd &equality_A, VectorX
     SparseMatrix<double> objective_matrix = hessian_Q.sparseView();
     SparseMatrix<double> constraint_matrix = equality_A.sparseView();
 
-    // VectorXd lb = VectorXd::Zero(equality_b.cols());
-    // VectorXd ub = VectorXd::Zero(equality_b.cols());
-
     IOSQP solver;
     c_int flag = solver.setMats(objective_matrix, objective_vector, constraint_matrix, equality_b, equality_b, 1e-3, 1e-3);
     // c_int flag = solver.setMats(hessian_Q.sparseView(), objective_vector, equality_A.sparseView(), equality_b, equality_b, 1e-3, 1e-3);
@@ -671,4 +469,128 @@ void computeDerivateMappingMatrix(MatrixXd &mapping_A, int k_segement, const vec
 
         mapping_A.block(block_index, block_index, sub_dim, sub_dim) = sub_A;
     }
+}
+
+void computeCoeffConstrainedQP(VectorXd &coeff, const MatrixXd &hessian_Q, int n_poly_order, int k_segment, const vector<double> &waypt_single_axis, const vector<double> &time_vector)
+{
+    // // SparseMatrix equality constraint equality_A
+    int Aeq_row, Aeq_col;
+
+    // number of rows of Aeq is same as number of equality constraints
+    // (1) intermediate waypoints: k-1
+    // (2) continuous p,v,a at intermediate waypoints: 3*(k-1)
+    // (3) start and end p,v,a: 6
+    // total = 4(k-1) + 6 = 4k+2
+    // each segment is represented by a n^th order polynomial which has (n+1) coefficients
+    Aeq_row = 4 * k_segment + 2;
+
+    // number of columns of Aeq is same as number of decision variables (number of polynomial coefficients)
+    // each segment is represented by a n^th order polynomial which has (n+1) coefficients
+    Aeq_col = k_segment * (n_poly_order + 1);
+
+    MatrixXd equality_A = MatrixXd::Zero(Aeq_row, Aeq_col);
+    int beq_dim = Aeq_row;
+    VectorXd equality_b = VectorXd::Zero(beq_dim);
+
+    computeAeq(equality_A, n_poly_order, k_segment, time_vector);
+
+    computeBeq(equality_b, k_segment, waypt_single_axis);
+
+    coeff = optimize(hessian_Q, equality_A, equality_b);
+}
+
+void computeCoeffCloseFormQP(VectorXd &coeff, const MatrixXd &hessian_Q, int n_poly_order, int k_segment, const vector<double> &waypt_single_axis, const vector<double> &time_vector)
+{
+    // closed form solutions
+    int mapping_A_dim = k_segment * 6; // every segment will have 2 sets of p,v,a constraints
+    MatrixXd mapping_A = MatrixXd::Zero(mapping_A_dim, mapping_A_dim);
+    computeDerivateMappingMatrix(mapping_A, k_segment, time_vector);
+
+    //
+    int constraint_order = 2;                                       // p (order 0), v (order 1), a (order 2)
+    int fixed_number = 2 * (constraint_order + 1) + k_segment - 1; // initial and final p,v,a + intermediate p
+    int free_number = constraint_order * (k_segment - 1);          // intermediate v,a
+
+    // VectorXd decision_f(fixed_number), decision_p(free_number);
+
+    VectorXd decision_f = MatrixXd::Zero(fixed_number, 1);
+    decision_f(0) = waypt_single_axis[0];
+    for (int i = 3; i < 3 + k_segment; i++)
+    {
+        decision_f(i) = waypt_single_axis[i - 2];
+    }
+
+    VectorXd decision_p_primal = MatrixXd::Zero(free_number, 1);
+
+    int C_t_col = fixed_number + free_number;
+    int C_t_row = k_segment * 2 * (1 + constraint_order);
+
+    MatrixXd C_t = MatrixXd::Zero(C_t_row, C_t_col);
+
+    Matrix3d C_0;
+    C_0 << 1, 0, 0,
+        0, 1, 0,
+        0, 0, 1;
+
+    Vector4d C_1;
+    C_1 << 1, 0, 0, 1;
+
+    Matrix<double, 5, 2> C_2;
+    C_2.setZero();
+    C_2(0, 0) = 1;
+    C_2(1, 1) = 1;
+    C_2(3, 0) = 1;
+    C_2(4, 1) = 1;
+
+    int row_count = 0;
+    int col_count = 0;
+
+    C_t.block(row_count, col_count, C_0.rows(), C_0.cols()) = C_0;
+
+    row_count += C_0.rows();
+    col_count += C_0.cols();
+
+    for (int i = 0; i < k_segment - 1; i++)
+    {
+        C_t.block(row_count, col_count, C_1.rows(), C_1.cols()) = C_1;
+        row_count += C_1.rows();
+        row_count += 2;
+        col_count += C_1.cols();
+    }
+
+    C_t.block(row_count, col_count, C_0.rows(), C_0.cols()) = C_0;
+    col_count += C_0.cols();
+    row_count = 4;
+
+    for (int i = 0; i < k_segment - 1; i++)
+    {
+        C_t.block(row_count, col_count, C_2.rows(), C_2.cols()) = C_2;
+        row_count += C_2.rows();
+        row_count += 1;
+        col_count += C_2.cols();
+    }
+
+    int dim_R = fixed_number + free_number;
+    MatrixXd R = MatrixXd::Zero(dim_R, dim_R);
+    R = C_t.transpose() * (mapping_A.inverse()).transpose() * hessian_Q * mapping_A.inverse() * C_t;
+
+    MatrixXd R_ff = MatrixXd::Zero(fixed_number, fixed_number);
+    MatrixXd R_fp = MatrixXd::Zero(fixed_number, free_number);
+    MatrixXd R_pf = MatrixXd::Zero(free_number, fixed_number);
+    MatrixXd R_pp = MatrixXd::Zero(free_number, free_number);
+
+    R_ff = R.block(0, 0, fixed_number, fixed_number);
+    R_fp = R.block(0, fixed_number, fixed_number, free_number);
+    R_pf = R.block(fixed_number, 0, free_number, fixed_number);
+    R_pp = R.block(fixed_number, fixed_number, free_number, free_number);
+
+    decision_p_primal = -R_pp.inverse() * R_fp.transpose() * decision_f;
+    VectorXd decision_primal(fixed_number + free_number);
+    decision_primal << decision_f, decision_p_primal;
+
+    VectorXd derivative_vector(k_segment * (constraint_order + 1) * 2);
+
+    derivative_vector = C_t * decision_primal;
+
+    coeff = mapping_A.inverse() * derivative_vector;
 }
