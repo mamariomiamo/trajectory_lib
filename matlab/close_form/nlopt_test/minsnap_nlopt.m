@@ -39,10 +39,10 @@ T = total_dist/v_nominal;
 
 time_initial_guess = allocate_time(waypts,T);
 time_vector = time_initial_guess;
-time_initial_guess = time_initial_guess(2:end);
+% time_initial_guess = time_initial_guess(2:end);
 
 % % A is the mapping matrix between p (coefficients) and d (derivatives)
-mapping_A=getMappingA(n_order, k_segment, time_vector, coefficient_number);
+mapping_A=getMapping(n_order, k_segment, time_vector, coefficient_number);
 
 % fixed decision variable
 fixed_number = 2*(r_order + 1) + k_segment-1; % initial and final p,v,a + intermediate p
@@ -58,7 +58,7 @@ C_t = C';
 
 % time_vector = allocate_time(waypts, T);
 % time_vector = [0 2 4 10];
-Q_hessian = calQ(time_vector);
+Q_hessian = getHessian(time_vector);
 M = mapping_A;
 R = C * inv(M)' * Q_hessian * inv(M) * C_t;
 % R = C * inv(M)' * Q_hessian) \M * C_t;
@@ -69,9 +69,9 @@ d_primal_x = getDerivativePrimal(d_f(:,1), R_pp, R_fp, k_segment, waypts(1,:));
 d_primal_y = getDerivativePrimal(d_f(:,2), R_pp, R_fp, k_segment, waypts(2,:));
 d_primal_z = getDerivativePrimal(d_f(:,3), R_pp, R_fp, k_segment, waypts(3,:));
 
-d_primal = getDerivativePrimal_3axis(d_f, R_pp, R_fp, k_segment, waypts);
+d_primal_initial_guess = getDerivativePrimal_3axis(d_f, R_pp, R_fp, k_segment, waypts);
 
-derivative_initial_guess = d_primal(fixed_number+1:end,:);
+derivative_initial_guess = d_primal_initial_guess(fixed_number+1:end,:);
 derivative_initial_guess = reshape(derivative_initial_guess, [1, free_number*dim]);
 
 initial_guess = [derivative_initial_guess, time_initial_guess];
@@ -118,6 +118,7 @@ time_penalty = 10;
 
 opt.lower_bounds = lower_bounds;
 opt.upper_bounds = upper_bounds;
+opt.max_iterations = 1000;
 
 opt.min_objective = @(x) myfunc_min_snap(x, waypts, n_order, r_order, k_segment, coefficient_number, dim, time_penalty);
 
@@ -125,8 +126,40 @@ opt.min_objective = @(x) myfunc_min_snap(x, waypts, n_order, r_order, k_segment,
 opt.fc = {};
 % opt.fc_tol = [1e-8, 1e-8];
 
-% opt.xtol_rel = 1e-4;
+opt.xtol_rel = 1e-4;
 
 [xopt, fmin, retcode] = nlopt_optimize(opt, initial_guess);
 
+d_primal = xopt(1:length(xopt)-3);
+time_primal = xopt(length(xopt)-2:end);
+d_primal = reshape(d_primal,[r_order*(k_segment-1),dim]);
+d_f(1,:) =  waypts(:,1);
+for i=4:4+k_segment-1
+    d_f(i,:) = waypts(:,i-2);
+end
+d = [d_f;d_primal];
+mapping_A_primal=getMapping(n_order, k_segment, time_vector, coefficient_number);
+p_primal = inv(mapping_A_primal)  * C_t * d;
 % [xopt, fmin, retcode] = nlopt_optimize(opt, [0.3 0.3])
+p_primal = reshape(p_primal, [n_order+1, k_segment,dim]);
+
+p_x = p_primal(:,:,1);
+p_y = p_primal(:,:,2);
+p_z = p_primal(:,:,3);
+
+[f1, x, vx, ax, tx] = plotTrajectory1axis(n_order, k_segment, time_primal, p_x, waypts(1,:), 1, 'x axis');
+movegui(f1, 'northwest');
+[f2, y, vy, ay, ty] = plotTrajectory1axis(n_order, k_segment, time_primal, p_y, waypts(2,:), 2, 'y axis');
+movegui(f2, 'north');
+[f3, z, vz, az, tz] = plotTrajectory1axis(n_order, k_segment, time_primal, p_z, waypts(3,:), 3, 'z axis');
+movegui(f3, 'northeast');
+
+f4 = plotTrajectory2axis(x,y,waypts,4);
+movegui(f4, 'southeast');
+
+f5 = plotTrajectory3axis(x,y,z,waypts,5);
+movegui(f5, 'southwest');
+
+
+
+
