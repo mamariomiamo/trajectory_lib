@@ -138,7 +138,7 @@ for i=4:4+k_segment-1
     d_f(i,:) = waypts(:,i-2);
 end
 d = [d_f;d_primal];
-mapping_A_primal=getMapping(n_order, k_segment, time_vector, coefficient_number);
+mapping_A_primal=getMapping(n_order, k_segment, time_primal, coefficient_number);
 p_primal = inv(mapping_A_primal)  * C_t * d;
 % [xopt, fmin, retcode] = nlopt_optimize(opt, [0.3 0.3])
 p_primal = reshape(p_primal, [n_order+1, k_segment,dim]);
