@@ -5,7 +5,10 @@ mapping_A=getMapping(n_order, k_segment, time_vector, coefficient_number);
 % fixed decision variable
 fixed_number = 2*(r_order + 1) + k_segment-1; % initial and final p,v,a + intermediate p
 d_f = zeros(fixed_number, dim); % vector to store fixed decision variables
-
+d_f(1,:) =  waypts(:,1);
+for i=4:4+k_segment-1
+    d_f(i,:) = waypts(:,i-2);
+end
 % free decision variable
 free_number = r_order*(k_segment-1); % intermedia v,a
 C = getSelectionC(fixed_number, free_number, k_segment, r_order);

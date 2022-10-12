@@ -2,7 +2,7 @@
 % end point derivative constriants (d)
 % A * p = d
 
-function A=getMappingA(n_order, k_segment, t_alloc, dim)
+function A=getMapping(n_order, k_segment, t_alloc, dim)
 A=[];
 
 % every segment will have two sets of derivative constriants
@@ -11,10 +11,10 @@ A=[];
 for i=1:k_segment
     A_sub = zeros(dim);
     for j=1:3
-        A_sub(j,:) = poly_evaluate(j-1,t_alloc(i),n_order);
+        A_sub(j,:) = poly_evaluate(j-1,0,n_order);
     end
     for j=4:6
-        A_sub(j,:) = poly_evaluate(j-4,t_alloc(i+1),n_order);
+        A_sub(j,:) = poly_evaluate(j-4,t_alloc(i),n_order);
     end
     A = blkdiag(A, A_sub);
 end

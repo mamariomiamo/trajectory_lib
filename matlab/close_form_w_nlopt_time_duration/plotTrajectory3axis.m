@@ -1,4 +1,4 @@
-function f = plotTrajectory3D(x,y,z,waypts,fig_index)
+function f = plotTrajectory3axis(x,y,z,waypts,fig_index)
 f = figure(fig_index);
 plot3(waypts(1,:), waypts(2,:), waypts(3,:),'b--');
 hold on
