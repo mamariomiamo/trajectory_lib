@@ -10,31 +10,33 @@ coefficient_number = n_order+1;
 dim = 3; % 3 as in x,y,z
 v_max_abs = 5.0;
 a_max_abs = 5.0;
-v_nominal = 1.5;
+v_nominal = v_max_abs;
 kinematic_constraint_low = [-5 -5];
 kinematic_constraint_up = [5, 5];
-waypts = [0,0, 0;
-    1,2, 1;
-    2,-1, 2;
-    4,8, 3;
-    5,2, 0]';
+% waypts = [0,0, 0;
+%     1,2, 1;
+%     2,-1, 2;
+%     4,8, 3;
+%     5,2, 0]';
 
-% waypts = [ -2 4 1;
-%            -1 0.5 2;
-%             0 0 3;
-%             1 1 1]';
+waypts = [ -20 4 1;
+           -10 0.5 2;
+            50 30 3;
+            100 10 1]';
 
 k_segment = size(waypts,2) - 1;
 
 total_dist = calDistance(waypts, k_segment);
 
-T = total_dist/v_nominal;
+T = total_dist/1;
 
 % time_initial_guess = allocate_time(waypts,T);
-time_initial_guess = [3 4 5 6];
+time_initial_guess = [0.1 0.1 0.1];
 % C for selection matrix
 [derivative_initial_guess, C, d_f, fixed_number, free_number] = minSnapCloseFormOpt(waypts, time_initial_guess, dim, r_order, n_order, k_segment, coefficient_number);
 derivative_initial_guess = reshape(derivative_initial_guess, [1, free_number*dim]);
+derivative_initial_guess = checkFeasibility(derivative_initial_guess,v_max_abs, a_max_abs,k_segment);
+derivative_initial_guess = ones(1,length(derivative_initial_guess))*1;
 initial_guess = [derivative_initial_guess, time_initial_guess];
 C_t = C';
 
@@ -65,7 +67,7 @@ opt.upper_bounds = upper_bounds;
 opt.min_objective = @(x) myfunc_min_snap(x, waypts, n_order, r_order, k_segment, coefficient_number, dim, time_penalty);
 opt.fc = {};
 
-opt.xtol_rel = 0.0001;
+opt.xtol_rel = 0.001;
 
 [xopt, fmin, retcode] = nlopt_optimize(opt, initial_guess);
 
