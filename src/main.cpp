@@ -1,4 +1,5 @@
 #include "matplotlibcpp.h"
+#include "min_snap_qp.h"
 #include "iosqp.hpp"
 #include <iostream>
 #include <eigen3/Eigen/Dense>
@@ -135,6 +136,11 @@ int main()
 
     vector<double> time_vector = computeT(waypt_list, vel_max);
 
+    for (auto time:time_vector)
+    {
+        log(time);
+    }
+
     // 3. Set up optimization problem
     // 3.0 get polynomial order (n), derivative order (r) and segement number (k)
     int k_segement = waypt_list.size() - 1;
@@ -188,7 +194,7 @@ vector<double> computeT(const vector<Vector3d> &waypt_list, const Vector3d &vel_
     int timestamp_number = segment_number + 1;
 
     vector<double> segment_length(segment_number, 0);
-    vector<double> time_vector(timestamp_number, 0);
+    vector<double> time_vector(segment_number, 0);
 
     double total_dist = 0;
     for (int i = 0; i < segment_number; i++)
@@ -200,13 +206,13 @@ vector<double> computeT(const vector<Vector3d> &waypt_list, const Vector3d &vel_
 
     double total_time = total_dist / vel_norm;
 
-    for (int i = 1; i < timestamp_number; i++)
+    for (int i = 0; i < segment_number; i++)
     {
         // holds relative timestamp for each segment duration
         // time_vector[i] = total_time * (segment_length[i-1] / total_dist);
 
         // holds absolute timestamp for each segment duration
-        time_vector[i] = total_time * (segment_length[i - 1] / total_dist) + time_vector[i - 1]; 
+        time_vector[i] = total_time * (segment_length[i] / total_dist); 
     }
 
     return time_vector;
@@ -223,8 +229,8 @@ void computeHessian(MatrixXd &hessian, int hessian_dim, int n_poly_order, int r_
 
     for (int i = 0; i < k_segement; i++) // every segment has one sub_mat
     {
-        t_f = time_vector[i + 1];
-        t_0 = time_vector[i];
+        t_f = time_vector[i];
+        t_0 = 0;
         for (int j = r_derivate_order; j < sub_mat_dim; j++)     // row index of sub_mat non-zero entry
         {                                                        // e.g. jerk(t) is 3^rd order derivative
                                                                  // monomial basis becomes [0 0 0 6 24t] for 4^th order poly
@@ -454,14 +460,14 @@ void computeDerivateMappingMatrix(MatrixXd &mapping_A, int k_segement, const vec
 
         for (int j = 0; j < 3; j++)
         {
-            evaluatePoly(sub_A_row, j, time_vector[i], (sub_dim - 1));
+            evaluatePoly(sub_A_row, j, 0, (sub_dim - 1));
             sub_A.row(j) = sub_A_row.transpose();
             sub_A_row = VectorXd::Zero(sub_dim);
         }
 
         for (int j = 3; j < 6; j++)
         {
-            evaluatePoly(sub_A_row, j - 3, time_vector[i + 1], (sub_dim - 1));
+            evaluatePoly(sub_A_row, j - 3, time_vector[i], (sub_dim - 1));
             sub_A.row(j) = sub_A_row.transpose();
             sub_A_row = VectorXd::Zero(sub_dim);
         }
