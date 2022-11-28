@@ -48,7 +48,6 @@ namespace MIN_SNAP
         double vel_norm = vel_max.norm();
 
         int segment_number = waypt_list.size() - 1;
-        int timestamp_number = segment_number + 1;
 
         vector<double> segment_length(segment_number, 0);
         vector<double> time_vector(segment_number, 0);
@@ -79,7 +78,7 @@ namespace MIN_SNAP
     {
         // double vel_norm = vel_max.norm();
 
-        int segment_number = waypt_list.size() - 1;
+        int segment_number = waypt_list.size() - 1; // same as number of entries in time vector
         int timestamp_number = segment_number + 1;
 
         vector<double> segment_length(segment_number, 0);
@@ -113,8 +112,7 @@ namespace MIN_SNAP
     void min_snap_traj::computeHessian(MatrixXd &hessian, int hessian_dim, int n_poly_order, int r_derivate_order, int k_segment, const vector<double> &time_vector)
     {
         int sub_mat_dim = n_poly_order + 1;
-        // MatrixXd sub_mat = MatrixXd::Zero(sub_mat_dim, sub_mat_dim);
-        MatrixXd sub_mat(sub_mat_dim, sub_mat_dim);
+        MatrixXd sub_mat = MatrixXd::Zero(sub_mat_dim, sub_mat_dim);
 
         double t_0 = 0;
         double t_f;
@@ -517,14 +515,15 @@ namespace MIN_SNAP
 
         // VectorXd decision_f(fixed_number), decision_p(free_number);
 
-        MatrixXd decision_f(fixed_number, m_dimension);
+        MatrixXd decision_f = MatrixXd::Zero(fixed_number, m_dimension);
+
         decision_f.row(0) = waypt.col(0);
         for (int i = 3; i < 3 + k_segment; i++)
         {
             decision_f.row(i) = waypt.col(i - 2);
         }
 
-        MatrixXd decision_p_primal(free_number, m_dimension);
+        MatrixXd decision_p_primal = MatrixXd::Zero(free_number, m_dimension);
 
         int C_t_col = fixed_number + free_number;
         int C_t_row = k_segment * 2 * (1 + constraint_order);
@@ -577,7 +576,6 @@ namespace MIN_SNAP
         int dim_R = fixed_number + free_number;
         MatrixXd R = MatrixXd::Zero(dim_R, dim_R);
         R = C_t.transpose() * (mapping_A.inverse()).transpose() * hessian_Q * mapping_A.inverse() * C_t;
-
         MatrixXd R_ff = MatrixXd::Zero(fixed_number, fixed_number);
         MatrixXd R_fp = MatrixXd::Zero(fixed_number, free_number);
         MatrixXd R_pf = MatrixXd::Zero(free_number, fixed_number);
@@ -589,10 +587,10 @@ namespace MIN_SNAP
         R_pp = R.block(fixed_number, fixed_number, free_number, free_number);
 
         decision_p_primal = -R_pp.inverse() * R_fp.transpose() * decision_f;
-        MatrixXd decision_primal(fixed_number + free_number, m_dimension);
+        MatrixXd decision_primal = MatrixXd::Zero(fixed_number + free_number, m_dimension);
         decision_primal << decision_f, decision_p_primal;
 
-        MatrixXd derivative_vector(k_segment * (constraint_order + 1) * 2, m_dimension);
+        MatrixXd derivative_vector = MatrixXd::Zero(k_segment * (constraint_order + 1) * 2, m_dimension);
 
         derivative_vector = C_t * decision_primal;
 
@@ -658,7 +656,7 @@ namespace MIN_SNAP
             this->computeCoeffConstrainedQP(trajectory.y_coeff, hessian_Q, n_order, k_segment, waypt_single_axis[1], time_vector);
             this->computeCoeffConstrainedQP(trajectory.z_coeff, hessian_Q, n_order, k_segment, waypt_single_axis[2], time_vector);
 
-            MatrixXd coeff_all(k_segment*(n_order+1),m_dimension);
+            MatrixXd coeff_all = MatrixXd::Zero(k_segment * (n_order + 1), m_dimension);
             coeff_all.col(0) = trajectory.x_coeff;
             coeff_all.col(1) = trajectory.y_coeff;
             coeff_all.col(2) = trajectory.z_coeff;
