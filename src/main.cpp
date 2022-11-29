@@ -26,7 +26,7 @@ int main()
         Eigen::Vector3d(1.0, 1.0, 1.0)};
 
     const auto close_form_tic = high_resolution_clock::now();
-    auto min_snap_close_form = std::make_shared<MIN_SNAP::min_snap_traj>(waypt_list, 3, true);
+    auto min_snap_close_form = std::make_shared<MIN_SNAP::min_snap_traj>(waypt_list, 3, true, false);
     // std::shared_ptr<MIN_SNAP::min_snap_traj> min_snap_close_form = std::make_shared<MIN_SNAP::min_snap_traj>(waypt_list, 3, true);
     MIN_SNAP::poly_traj trajectory;
     trajectory = min_snap_close_form->computeTrajectory(waypt_list);
@@ -41,7 +41,7 @@ int main()
     }
 
     const auto qp_tic = high_resolution_clock::now();
-    auto min_snap_qp = std::make_shared<MIN_SNAP::min_snap_traj>(waypt_list, 3, false);
+    auto min_snap_qp = std::make_shared<MIN_SNAP::min_snap_traj>(waypt_list, 3, false, false);
     MIN_SNAP::poly_traj trajectory_qp;
     trajectory_qp = min_snap_qp->computeTrajectory(waypt_list);
     const auto qp_toc = high_resolution_clock::now();

@@ -29,7 +29,7 @@ namespace MIN_SNAP
     public:
         min_snap_traj(int m_dimension, int k_segment, int n_order, int r_derivative_order, bool close_form);
 
-        min_snap_traj(const std::vector<Eigen::Vector3d> &waypt_list, int m_dimension, bool close_form);
+        min_snap_traj(const std::vector<Eigen::Vector3d> &waypt_list, int m_dimension, bool close_form, bool verbose);
 
         min_snap_traj(const std::vector<Eigen::Vector3d> &waypt_list, int m_dimension, int n_order, int r_derivative_order, bool close_form);
 
@@ -77,6 +77,7 @@ namespace MIN_SNAP
         int r_derivative_order = 4;
         int v_norm = 2;
         bool close_form;
+        bool verbose;
         std::vector<Eigen::Vector3d> waypt_list;
         std::vector<double> time_vector;
         poly_traj trajectory;

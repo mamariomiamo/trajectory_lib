@@ -6,8 +6,8 @@ namespace MIN_SNAP
     {
     }
 
-    min_snap_traj::min_snap_traj(const std::vector<Eigen::Vector3d> &waypt_list, int m_dimension, bool close_form)
-        : waypt_list(waypt_list), m_dimension(m_dimension), close_form(close_form)
+    min_snap_traj::min_snap_traj(const std::vector<Eigen::Vector3d> &waypt_list, int m_dimension, bool close_form, bool verbose)
+        : waypt_list(waypt_list), m_dimension(m_dimension), close_form(close_form), verbose(verbose)
     {
         k_segment = waypt_list.size() - 1;
         std::cout << "constructor is called\n";
@@ -327,7 +327,7 @@ namespace MIN_SNAP
         Eigen::SparseMatrix<double> objective_matrix = hessian_Q.sparseView();
         Eigen::SparseMatrix<double> constraint_matrix = equality_A.sparseView();
 
-        IOSQP solver(false);
+        IOSQP solver(verbose);
         c_int flag = solver.setMats(objective_matrix, objective_vector, constraint_matrix, equality_b, equality_b, 1e-3, 1e-3);
         // c_int flag = solver.setMats(hessian_Q.sparseView(), objective_vector, equality_A.sparseView(), equality_b, equality_b, 1e-3, 1e-3);
         if (flag != 0)
