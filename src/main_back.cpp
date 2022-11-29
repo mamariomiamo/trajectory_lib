@@ -48,7 +48,7 @@ void testQuadProg()
     Eigen::VectorXd lower_bound(3);
     lower_bound << -kInfinity, -kInfinity, -kInfinity;
 
-    IOSQP solver;
+    IOSQP solver(false);
     c_int flag = solver.setMats(objective_matrix, objective_vector, constraint_matrix, lower_bound, upper_bound, 1e-3, 1e-3);
     if (flag != 0)
     {
@@ -146,7 +146,7 @@ int main()
         std::cout << small_q << std::endl;
     }
 
-    IOSQP solver;
+    IOSQP solver(false);
     Eigen::SparseMatrix<double> P(2, 2);
     const Triplet<double> kTripletsP[] = {
         {0, 0, 4.0}, {1, 0, 1.0}, {0, 1, 1.0}, {1, 1, 2.0}};

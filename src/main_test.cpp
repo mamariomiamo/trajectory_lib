@@ -50,7 +50,7 @@ void testQuadProg()
     Eigen::VectorXd lower_bound(3);
     lower_bound << -kInfinity, -kInfinity, -kInfinity;
 
-    IOSQP solver;
+    IOSQP solver(false);
     c_int flag = solver.setMats(objective_matrix, objective_vector, constraint_matrix, lower_bound, upper_bound, 1e-3, 1e-3);
     if (flag != 0)
     {
@@ -514,7 +514,7 @@ Eigen::VectorXd optimize(const Eigen::MatrixXd &hessian_Q, const Eigen::MatrixXd
     Eigen::SparseMatrix<double> objective_matrix = hessian_Q.sparseView();
     Eigen::SparseMatrix<double> constraint_matrix = equality_A.sparseView();
 
-    IOSQP solver;
+    IOSQP solver(false);
     c_int flag = solver.setMats(objective_matrix, objective_vector, constraint_matrix, equality_b, equality_b, 1e-3, 1e-3);
     // c_int flag = solver.setMats(hessian_Q.sparseView(), objective_vector, equality_A.sparseView(), equality_b, equality_b, 1e-3, 1e-3);
     if (flag != 0)

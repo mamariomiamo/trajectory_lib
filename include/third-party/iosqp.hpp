@@ -1,3 +1,5 @@
+// credits: https://github.com/ZJU-FAST-Lab/OSQP_Interface
+
 #ifndef IOSQP_HPP
 #define IOSQP_HPP
 
@@ -14,10 +16,11 @@
 class IOSQP
 {
 public:
-    IOSQP() : UNBOUNDED_VAL(OSQP_INFTY),
+    IOSQP(bool verbose) : UNBOUNDED_VAL(OSQP_INFTY),
               pWork(nullptr),
               pSettings(nullptr),
-              pData(nullptr)
+              pData(nullptr),
+              verbose(verbose)
     {
         pSettings = (OSQPSettings *)c_malloc(sizeof(OSQPSettings));
         pData = (OSQPData *)c_malloc(sizeof(OSQPData));
@@ -86,6 +89,7 @@ public:
 
         pSettings->eps_abs = eps_abs;
         pSettings->eps_rel = eps_rel;
+        pSettings->verbose = verbose;
 
         c_int exitflag = osqp_setup(&pWork, pData, pSettings);
 
@@ -117,6 +121,7 @@ private:
     OSQPWorkspace *pWork;
     OSQPSettings *pSettings;
     OSQPData *pData;
+    bool verbose;
 };
 
 #endif
