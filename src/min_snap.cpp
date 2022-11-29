@@ -10,7 +10,6 @@ namespace MIN_SNAP
         : waypt_list(waypt_list), m_dimension(m_dimension), close_form(close_form), verbose(verbose)
     {
         k_segment = waypt_list.size() - 1;
-        std::cout << "constructor is called\n";
     }
 
     min_snap_traj::min_snap_traj(const std::vector<Eigen::Vector3d> &waypt_list, int m_dimension, int n_order, int r_derivative_order, bool close_form)
@@ -89,11 +88,9 @@ namespace MIN_SNAP
         {
             double length = (waypt_list[i + 1] - waypt_list[i]).norm();
             segment_length[i] = length;
-            std::cout << length << std::endl;
             total_dist += length;
         }
 
-        std::cout << total_dist << std::endl;
 
         // double total_time = total_dist / vel_norm;
 
